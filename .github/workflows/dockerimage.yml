@@ -1,0 +1,13 @@
+name: Docker Image CI
+on:
+  push:
+    # We use `**` to match all branch names, including those with backslashes.
+    branches: [ '**' ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: git checkout
+      uses: actions/checkout@v4
+    - name: Build
+      run: docker build . --file Dockerfile

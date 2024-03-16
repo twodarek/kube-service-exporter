@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consul
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul
+  namespace: consul
+spec:
+  ports:
+  - port: 8500
+    protocol: TCP
+    targetPort: 8500
+  selector:
+    run: consul
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    run: consul
+  name: consul
+  namespace: consul
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: consul
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        run: consul
+    spec:
+      containers:
+      - image: consul:1.15.4
+        imagePullPolicy: IfNotPresent
+        name: consul
+        ports:
+        - containerPort: 8500
+          protocol: TCP

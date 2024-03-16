@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -e
+
+CLUSTER_NAME=kse
+
+kind_cmd() {
+  cat <<EOF > /tmp/kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+- role: worker
+- role: worker
+EOF
+
+  kind --name "$CLUSTER_NAME" --config /tmp/kind-config.yaml "$@"
+}
+
+cluster_exists() {
+  kind get clusters | grep -qe "^${CLUSTER_NAME}$"
+}
+
+
+cluster_exists "$CLUSTER_NAME" || kind_cmd create cluster
+tilt up --namespace=kube-service-exporter-dev

@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-service-exporter-dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-service-exporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-service-exporter
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: kube-service-exporter-dev
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-service-exporter
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - services
+    verbs:
+      - watch
+      - list
+      - get
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-cluster-metadata
+  namespace: kube-service-exporter-dev
+data:
+  KUBE_CLUSTER_NAME: dev
+  KUBE_CLUSTER_STAMP: dev-stamp
+  KUBE_DATACENTER: dev-dc
+  KUBE_REGION: dev-region
+  KUBE_SITE: dev-site
+  datacenter: dev-dc
+  kubernetes_cluster_name: dev
+  kubernetes_cluster_stamp: dev-stamp
+  region: dev-region
+  site: dev-site
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: kube-service-exporter
+  name: kube-service-exporter
+  namespace: kube-service-exporter-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-service-exporter
+  strategy:
+    rollingUpdate:
+      maxSurge: 100%
+      maxUnavailable: 50%
+  template:
+    metadata:
+      labels:
+        app: kube-service-exporter
+    spec:
+      containers:
+        - env:
+            - name: GOMAXPROCS
+              value: "1"
+            - name: KSE_CONSUL_HOST
+              value: "consul.consul.svc.cluster.local"
+            - name: KSE_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KSE_MIN_SELECTOR_NODES
+              value: "1"
+            - name: KSE_NODE_SELECTOR
+              value: '["kubernetes.io/os=linux"]'
+            - name: KSE_DOGSTATSD_HOST
+              value: "fake-statsd.fake-statsd.svc.cluster.local"
+            - name: KSE_DOGSTATSD_PORT
+              value: "28125"
+            - name: KSE_SERVICES_ENABLED
+              value: "false"
+            - name: KSE_CLUSTER_ID
+              valueFrom:
+                configMapKeyRef:
+                  key: kubernetes_cluster_name
+                  name: kube-cluster-metadata
+            - name: KSE_CONSUL_KV_PREFIX
+              value: kse
+            - name: KSE_SERVICES_KEY_TEMPLATE
+              value: '{{ .LoadBalancerClass }}/{{ id }}'
+          image: kube-service-exporter
+          imagePullPolicy: Always
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sleep
+                  - "5"
+          name: kube-service-exporter
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "2.0"
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 50Mi

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+tilt down
+kind --name kse delete cluster
