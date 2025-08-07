@@ -1,3 +1,6 @@
+# Archived
+This is a public archive of the most recent version of kube-service-exporter before it was closed-sourced at GitHub.  Not actively maintained.
+
 # kube-service-exporter
 
 A Kubernetes controller for enabling load balancing *across multiple clusters*, written in Go.
